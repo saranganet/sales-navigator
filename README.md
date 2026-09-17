@@ -64,7 +64,7 @@ Implemented:
 - Job title/headline.
 - Company name.
 - Location.
-- Profile URL / LinkedIn URL normalization.
+- Profile URL normalization: automatically converts internal Sales Navigator URLs (`/sales/lead/` or `/sales/people/`) into the person's actual public LinkedIn profile URL (`https://www.linkedin.com/in/...`).
 - Connection degree.
 - Industry when visibly available.
 - Per-record `scrapedAt` timestamp.

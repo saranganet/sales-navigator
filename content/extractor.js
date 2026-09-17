@@ -4,7 +4,8 @@
 
   function cleanUrl(url) {
     try {
-      const u = new URL(url, location.origin);
+      const base = (typeof location !== 'undefined' && location.origin) ? location.origin : 'https://www.linkedin.com';
+      const u = new URL(url, base);
       u.hash = '';
       for (const key of [...u.searchParams.keys()]) {
         if (/trk|tracking|miniProfile|lipi|sessionId|context|ref/i.test(key)) {
@@ -15,6 +16,32 @@
     } catch {
       return '';
     }
+  }
+
+  function convertToLinkedInUrl(rawUrl) {
+    if (!rawUrl) return '';
+    const str = String(rawUrl).trim();
+
+    // 1. If it is already a public LinkedIn profile URL (/in/...)
+    const inMatch = str.match(/(?:https?:\/\/(?:[a-zA-Z0-9-]+\.)*linkedin\.com)?\/in\/([a-zA-Z0-9_%-]+)/i);
+    if (inMatch && inMatch[1]) {
+      return `https://www.linkedin.com/in/${inMatch[1]}`;
+    }
+
+    // 2. Convert Sales Navigator URLs (/sales/lead/ or /sales/people/) to standard LinkedIn profile URL
+    // Examples:
+    // https://www.linkedin.com/sales/lead/ACwAADavid,NAME,search -> https://www.linkedin.com/in/ACwAADavid
+    // https://www.linkedin.com/sales/people/ACwAACiel,NAME,search -> https://www.linkedin.com/in/ACwAACiel
+    // /sales/lead/(ACwAADavid,NAME,search) -> https://www.linkedin.com/in/ACwAADavid
+    const snMatch = str.match(/\/sales\/(?:lead|people)\/(?:\()?([a-zA-Z0-9_%-]+)/i);
+    if (snMatch && snMatch[1]) {
+      const id = snMatch[1].replace(/^[(),]+|[(),]+$/g, '');
+      if (id) {
+        return `https://www.linkedin.com/in/${id}`;
+      }
+    }
+
+    return cleanUrl(str);
   }
 
   function textOf(el) {
@@ -65,12 +92,57 @@
     return String(string).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
-  function extractProfileUrl(card) {
+  function extractSalesNavUrl(card) {
     const link = visibleElements(card, S.profileLinks).find(a => {
       const href = String(a.getAttribute('href') || a.href || '');
-      return /\/sales\/(?:lead|people)\//i.test(href) || /\/in\//i.test(href);
+      return /\/sales\/(?:lead|people)\//i.test(href);
+    }) || [...card.querySelectorAll('a[href]')].find(a => {
+      const href = String(a.getAttribute('href') || a.href || '');
+      return /\/sales\/(?:lead|people)\//i.test(href);
     });
     return link ? cleanUrl(link.getAttribute('href') || link.href) : '';
+  }
+
+  function extractProfileUrl(card) {
+    // 1. Direct LinkedIn public /in/ link
+    const directInLink = visibleElements(card, S.profileLinks).find(a => {
+      const href = String(a.getAttribute('href') || a.href || '');
+      return /\/in\/[a-zA-Z0-9_%-]+/i.test(href);
+    });
+    if (directInLink) {
+      return convertToLinkedInUrl(directInLink.getAttribute('href') || directInLink.href);
+    }
+
+    // 2. Sales Navigator lead / people link
+    const snLink = visibleElements(card, S.profileLinks).find(a => {
+      const href = String(a.getAttribute('href') || a.href || '');
+      return /\/sales\/(?:lead|people)\//i.test(href);
+    });
+    if (snLink) {
+      return convertToLinkedInUrl(snLink.getAttribute('href') || snLink.href);
+    }
+
+    // 3. Fallback: search all links in card
+    const anyLink = [...card.querySelectorAll('a[href]')].find(a => {
+      const href = String(a.getAttribute('href') || a.href || '');
+      return /\/in\/[a-zA-Z0-9_%-]+/i.test(href) || /\/sales\/(?:lead|people)\//i.test(href);
+    });
+    if (anyLink) {
+      return convertToLinkedInUrl(anyLink.getAttribute('href') || anyLink.href);
+    }
+
+    // 4. Fallback: data-urn or data-member-id
+    const urnNode = card.querySelector('[data-urn*="member:"], [data-chameleon-result-urn*="member:"], [data-member-id]');
+    if (urnNode) {
+      const memberId = urnNode.getAttribute('data-member-id') ||
+                       urnNode.getAttribute('data-urn')?.match(/member:([a-zA-Z0-9_%-]+)/)?.[1] ||
+                       urnNode.getAttribute('data-chameleon-result-urn')?.match(/member:([a-zA-Z0-9_%-]+)/)?.[1];
+      if (memberId) {
+        return `https://www.linkedin.com/in/${memberId}`;
+      }
+    }
+
+    return '';
   }
 
   function cleanName(raw) {
@@ -395,7 +467,7 @@
     const url = extractProfileUrl(card);
     const name = extractName(card);
     if (url) score += 10;
-    if (/\/sales\/(?:lead|people)\//i.test(url)) score += 4;
+    if (/\/in\/|\/sales\/(?:lead|people)\//i.test(url)) score += 4;
     if (name) score += 4;
     if (firstMatching(card, S.titleNodes)) score += 2;
     if (firstMatching(card, S.companyNodes)) score += 2;
@@ -456,6 +528,7 @@
 
     const location = extractLocation(card);
     const profileUrl = extractProfileUrl(card);
+    const salesNavUrl = extractSalesNavUrl(card);
 
     return {
       firstName,
@@ -465,6 +538,7 @@
       companyName,
       location,
       profileUrl,
+      salesNavUrl,
       connectionDegree: extractConnectionDegree(card),
       industry: extractIndustry(card),
       scrapedAt: new Date().toISOString()
@@ -483,6 +557,9 @@
     extractCard,
     getRecords,
     cleanUrl,
+    convertToLinkedInUrl,
+    extractProfileUrl,
+    extractSalesNavUrl,
     cleanName,
     cleanTitle,
     cleanCompany,

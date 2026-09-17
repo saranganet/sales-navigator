@@ -134,11 +134,14 @@
   };
 
   SNScraper.isVisible = function(el) {
-    if (!el || !(el instanceof Element)) return false;
-    const style = window.getComputedStyle(el);
-    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+    if (!el || typeof el.getBoundingClientRect !== 'function') return false;
+    const win = el.ownerDocument?.defaultView || window;
+    const style = win.getComputedStyle ? win.getComputedStyle(el) : null;
+    if (style && (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0')) return false;
     const rect = el.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
+    if (rect.width > 0 && rect.height > 0) return true;
+    if (el.getClientRects && el.getClientRects().length > 0) return true;
+    return Boolean(el.offsetWidth || el.offsetHeight || el.offsetParent);
   };
 
   SNScraper.isDisabled = function(el) {
