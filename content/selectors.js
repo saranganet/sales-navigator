@@ -28,6 +28,16 @@
       'a[href*="/sales/company/"]',
       'a[href*="/company/"]'
     ],
+    companyWebsiteLinks: [
+      'a[data-anonymize="company-website"]',
+      'a[data-anonymize="company-url"]',
+      'a[data-control-name*="website"]',
+      'a[data-control-name*="company_website"]',
+      'a[aria-label*="website" i]',
+      'a[aria-label*="company website" i]',
+      'a[href*="redir/redirect"]',
+      'a[href^="http"]:not([href*="linkedin.com"]):not([href*="licdn.com"])'
+    ],
     nameNodes: [
       '[data-anonymize="person-name"] a',
       '[data-anonymize="person-name"]',

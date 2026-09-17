@@ -44,6 +44,40 @@
     return cleanUrl(str);
   }
 
+  function cleanDomain(input) {
+    if (!input) return '';
+    let raw = String(input).trim();
+
+    // If LinkedIn outbound redirect URL, unwrap it
+    if (/linkedin\.com\/redir\/redirect/i.test(raw)) {
+      try {
+        const base = (typeof location !== 'undefined' && location.origin) ? location.origin : 'https://www.linkedin.com';
+        const u = new URL(raw, base);
+        const target = u.searchParams.get('url');
+        if (target) raw = decodeURIComponent(target);
+      } catch {}
+    }
+
+    // Ensure scheme for URL parsing if missing
+    if (!/^https?:\/\//i.test(raw)) {
+      raw = 'https://' + raw;
+    }
+
+    try {
+      const parsed = new URL(raw);
+      let host = parsed.hostname.toLowerCase().trim();
+      // Exclude linkedin and internal tracking domains
+      if (!host || host.includes('linkedin.com') || host.includes('licdn.com')) {
+        return '';
+      }
+      // Strip leading www.
+      host = host.replace(/^www\./, '');
+      return host;
+    } catch {
+      return '';
+    }
+  }
+
   function textOf(el) {
     return SNScraper.normalizeText(el?.textContent || el?.getAttribute?.('aria-label') || '');
   }
@@ -306,6 +340,67 @@
     return '';
   }
 
+  function extractCompanyDomain(card) {
+    if (!card) return '';
+
+    // 1. Dedicated company website links / selectors from S.companyWebsiteLinks
+    const websiteSelectors = S.companyWebsiteLinks || [
+      'a[data-anonymize="company-website"]',
+      'a[data-anonymize="company-url"]',
+      'a[data-control-name*="website"]',
+      'a[data-control-name*="company_website"]',
+      'a[aria-label*="website" i]',
+      'a[aria-label*="company website" i]',
+      'a[href*="redir/redirect"]',
+      'a[href^="http"]:not([href*="linkedin.com"]):not([href*="licdn.com"])'
+    ];
+
+    for (const sel of websiteSelectors) {
+      const nodes = card.querySelectorAll(sel);
+      for (const node of nodes) {
+        const href = node.getAttribute('href') || node.href || '';
+        const domain = cleanDomain(href);
+        if (domain) return domain;
+      }
+    }
+
+    // 2. Data attributes on elements (e.g. data-website, data-company-url, data-domain)
+    const attrNodes = card.querySelectorAll('[data-website], [data-company-url], [data-domain], [data-company-website]');
+    for (const node of attrNodes) {
+      const val = node.getAttribute('data-website') ||
+                  node.getAttribute('data-company-url') ||
+                  node.getAttribute('data-domain') ||
+                  node.getAttribute('data-company-website');
+      const domain = cleanDomain(val);
+      if (domain) return domain;
+    }
+
+    // 3. Check any link in card pointing to an external domain or redirect
+    const links = card.querySelectorAll('a[href]');
+    for (const link of links) {
+      const href = String(link.getAttribute('href') || link.href || '');
+      if (/linkedin\.com\/redir\/redirect/i.test(href) || (/^https?:\/\//i.test(href) && !/linkedin\.com|licdn\.com/i.test(href))) {
+        const domain = cleanDomain(href);
+        if (domain) return domain;
+      }
+    }
+
+    // 4. Text pattern fallback: detect domain pattern in compact text elements
+    const textElements = card.querySelectorAll('span, a, div, p');
+    for (const el of textElements) {
+      if (el.children.length === 0 && el.textContent) {
+        const text = el.textContent.trim();
+        const match = text.match(/\b(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]{2,}\.(?:com|org|net|io|co|ai|in|co\.uk|co\.kr|kr|de|fr|jp|tech|app|dev))\b/i);
+        if (match && match[0] && !/linkedin\.com|licdn\.com/i.test(match[0])) {
+          const domain = cleanDomain(match[0]);
+          if (domain) return domain;
+        }
+      }
+    }
+
+    return '';
+  }
+
   function extractTitle(card, fullName, companyName) {
     let rawTitle = '';
 
@@ -526,6 +621,7 @@
       }
     }
 
+    const companyDomain = extractCompanyDomain(card);
     const location = extractLocation(card);
     const profileUrl = extractProfileUrl(card);
     const salesNavUrl = extractSalesNavUrl(card);
@@ -536,6 +632,7 @@
       fullName: cleanName(fullName),
       jobTitle,
       companyName,
+      companyDomain,
       location,
       profileUrl,
       salesNavUrl,
@@ -557,9 +654,11 @@
     extractCard,
     getRecords,
     cleanUrl,
+    cleanDomain,
     convertToLinkedInUrl,
     extractProfileUrl,
     extractSalesNavUrl,
+    extractCompanyDomain,
     cleanName,
     cleanTitle,
     cleanCompany,

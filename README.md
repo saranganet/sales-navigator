@@ -63,6 +63,7 @@ Implemented:
 - Full name and first/last split.
 - Job title/headline.
 - Company name.
+- Company domain: extracted directly from DOM external website links, data attributes, and outbound redirects.
 - Location.
 - Profile URL normalization: automatically converts internal Sales Navigator URLs (`/sales/lead/` or `/sales/people/`) into the person's actual public LinkedIn profile URL (`https://www.linkedin.com/in/...`).
 - Connection degree.
