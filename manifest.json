@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "Sales Navigator Scraper",
+  "version": "1.0.0",
+  "description": "Extract visible Sales Navigator search-result data from pages you are authorized to access.",
+  "minimum_chrome_version": "110",
+  "permissions": [
+    "storage",
+    "downloads"
+  ],
+  "host_permissions": [
+    "https://www.linkedin.com/*"
+  ],
+  "action": {
+    "default_title": "Sales Navigator Scraper",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "assets/icons/icon16.png",
+      "32": "assets/icons/icon32.png",
+      "48": "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "32": "assets/icons/icon32.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/*"],
+      "js": [
+        "content/selectors.js",
+        "content/page-detector.js",
+        "content/extractor.js",
+        "content/paginator.js",
+        "content/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
