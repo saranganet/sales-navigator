@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sales Navigator Scraper</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <div>
+        <h1>Sales Navigator Scraper</h1>
+        <p class="muted">Visible Sales Navigator results only</p>
+      </div>
+      <label class="switch" title="Enable or disable the extension">
+        <input id="enabledToggle" type="checkbox" aria-label="Extension enabled">
+        <span class="slider"></span>
+      </label>
+    </header>
+
+    <section class="card">
+      <div class="row"><span>Status</span><strong id="detectedStatus">Checking…</strong></div>
+      <div class="row"><span>Current page</span><strong id="currentPage">—</strong></div>
+      <div class="row"><span>Records on page</span><strong id="recordsOnPage">—</strong></div>
+      <div id="errorBox" class="alert hidden"></div>
+    </section>
+
+    <section class="card" id="controlsCard">
+      <div class="range-grid">
+        <label>
+          <span class="field-label">From page</span>
+          <input id="fromPageInput" type="number" min="1" max="5000" step="1" value="1">
+        </label>
+        <label>
+          <span class="field-label">To page</span>
+          <input id="toPageInput" type="number" min="1" max="5000" step="1" value="1">
+        </label>
+      </div>
+      <div class="fixed-info">Records per page: <strong>25</strong> (final page may contain fewer)</div>
+      <div class="helper-text">Example: From <strong>20</strong> to <strong>40</strong> scrapes pages 20–40.</div>
+      <div class="button-row">
+        <button id="startBtn" class="primary">Start Scraping</button>
+        <button id="stopBtn" class="secondary" disabled>Stop</button>
+      </div>
+      <div class="button-row small-row">
+        <button id="pauseBtn" class="secondary" disabled>Pause</button>
+        <button id="resumeBtn" class="secondary" disabled>Resume</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="section-title">Progress</div>
+      <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+      <div class="progress-label" id="progressLabel">0%</div>
+      <div class="range-progress" id="rangeProgress">Pages 0 / 1</div>
+      <div class="stats-grid">
+        <div><span>Pages scraped</span><strong id="pagesStat">0</strong></div>
+        <div><span>Collected</span><strong id="collectedStat">0</strong></div>
+        <div><span>Duplicates</span><strong id="dupesStat">0</strong></div>
+        <div><span>Unique</span><strong id="uniqueStat">0</strong></div>
+      </div>
+      <p id="reasonText" class="muted reason"></p>
+    </section>
+
+    <section class="card">
+      <div class="section-title">Export</div>
+      <div class="button-row">
+        <button id="csvBtn" class="secondary" disabled>Download CSV</button>
+        <button id="jsonBtn" class="secondary" disabled>Download JSON</button>
+      </div>
+      <button id="debugBtn" class="link-btn">Inspect / Debug</button>
+      <pre id="debugOutput" class="debug hidden"></pre>
+    </section>
+
+    <footer>Uses only data rendered in your authorized Sales Navigator session.</footer>
+  </main>
+  <script src="../utils/csv-export.js"></script>
+  <script src="../utils/json-export.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
